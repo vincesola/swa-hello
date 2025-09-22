@@ -1,6 +1,13 @@
 {
   "bindings": [
-    { "type": "httpTrigger", "authLevel": "anonymous", "direction": "in", "methods": ["post"], "name": "req" },
+    {
+      "type": "httpTrigger",
+      "authLevel": "anonymous",
+      "direction": "in",
+      "methods": ["post"],
+      "name": "req",
+      "route": "push/register"
+    },
     { "type": "http", "direction": "out", "name": "res" }
   ],
   "scriptFile": "index.js"
