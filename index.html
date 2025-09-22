@@ -1,57 +1,120 @@
 <!doctype html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="manifest" href="/manifest.webmanifest">
+    <title>SWA push smoke</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 16px; }
+      button { padding: 10px 14px; margin: 6px 8px 6px 0; }
+      pre { background:#f5f5f5; padding:10px; border-radius:8px; white-space:pre-wrap; }
+      a { text-decoration: none; }
+    </style>
+  </head>
   <body>
-    <h1>SWA is live ✅</h1>
+    <h1>ADHD Cleaning App — Smoke</h1>
+
     <p>
       <a href="/login">Login</a> |
-      <a href="/.auth/me" target="_blank">/.auth/me</a>
+      <a href="/logout">Logout</a> |
+      <a href="/.auth/me" target="_blank">Open /.auth/me</a>
     </p>
 
-    <button id="btnSub">Subscribe to Push</button>
-    <button id="btnTest">Send Test Push</button>
+    <div>
+      <button id="btnMe">Check identity</button>
+      <button id="btnSW">Register SW</button>
+      <button id="btnSub">Subscribe to Push</button>
+      <button id="btnTest">Send Test Push</button>
+    </div>
+
+    <h3>Log</h3>
+    <pre id="log"></pre>
 
     <script>
-      async function getPublicKey() {
-        const r = await fetch('/api/push/config', { credentials: 'include' });
-        const j = await r.json();
-        return j.vapidPublicKey;
-      }
-      function toUint8(base64url) {
+      const logEl = document.getElementById('log');
+      const log = (...args) => { logEl.textContent += args.join(' ') + '\n'; };
+
+      const toUint8 = (base64url) => {
         const pad = '='.repeat((4 - base64url.length % 4) % 4);
         const b64 = (base64url + pad).replace(/-/g, '+').replace(/_/g, '/');
         const raw = atob(b64);
         const out = new Uint8Array(raw.length);
         for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
         return out;
+      };
+
+      async function getMe() {
+        const r = await fetch('/.auth/me', { credentials: 'include' });
+        const t = await r.text();
+        log('/.auth/me status:', r.status);
+        log(t);
+        return { status: r.status, body: t };
       }
 
+      async function getPublicKey() {
+        const r = await fetch('/api/push/config', { credentials: 'include', redirect: 'follow' });
+        log('/api/push/config status:', r.status);
+        const text = await r.text();
+        log('config payload:', text);
+        try { return JSON.parse(text).vapidPublicKey; }
+        catch (e) { throw new Error('Failed to parse /api/push/config JSON'); }
+      }
+
+      document.getElementById('btnMe').onclick = async () => {
+        try { await getMe(); } catch (e) { log('ERROR btnMe:', e.message); }
+      };
+
+      document.getElementById('btnSW').onclick = async () => {
+        try {
+          if (!('serviceWorker' in navigator)) { log('ServiceWorker not supported'); return; }
+          const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          log('SW registered:', !!reg);
+        } catch (e) { log('ERROR register SW:', e.message); }
+      };
+
       document.getElementById('btnSub').onclick = async () => {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-          alert('Push not supported in this browser');
-          return;
-        }
-        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') { alert('Permission denied'); return; }
-        const vapid = await getPublicKey();
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: toUint8(vapid)
-        });
-        await fetch('/api/push/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ subscription: sub })
-        });
-        alert('Subscribed! Now click "Send Test Push".');
+        try {
+          if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            log('Push not supported in this browser'); return;
+          }
+          const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          log('SW registered for push:', !!reg);
+
+          const perm = await Notification.requestPermission();
+          log('Notification permission:', perm);
+          if (perm !== 'granted') { log('Permission was not granted'); return; }
+
+          const vapid = await getPublicKey();
+          log('VAPID key length:', vapid?.length || 0);
+
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: toUint8(vapid)
+          });
+          log('Got subscription endpoint:', sub.endpoint);
+
+          const res = await fetch('/api/push/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ subscription: sub })
+          });
+          log('/api/push/register status:', res.status);
+          log('register response:', await res.text());
+        } catch (e) { log('ERROR subscribe:', e.message); }
       };
 
       document.getElementById('btnTest').onclick = async () => {
-        const r = await fetch('/api/push/send-test', { method: 'POST', credentials: 'include' });
-        const j = await r.json();
-        alert(JSON.stringify(j));
+        try {
+          const r = await fetch('/api/push/send-test', { method: 'POST', credentials: 'include' });
+          log('/api/push/send-test status:', r.status);
+          log('send-test response:', await r.text());
+        } catch (e) { log('ERROR send-test:', e.message); }
       };
+
+      // Optional: auto-log support status
+      log('supports SW:', 'serviceWorker' in navigator, 'supports Push:', 'PushManager' in window);
     </script>
   </body>
 </html>
