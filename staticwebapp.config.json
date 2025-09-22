@@ -1,0 +1,7 @@
+{
+  "navigationFallback": { "rewrite": "/index.html" },
+  "routes": [
+    { "route": "/login",  "redirect": "/.auth/login/aad?post_login_redirect_uri=/" },
+    { "route": "/logout", "redirect": "/.auth/logout?post_logout_redirect_uri=/" }
+  ]
+}
