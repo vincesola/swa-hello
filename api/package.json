@@ -1,0 +1,7 @@
+{
+  "name": "htapp-api",
+  "dependencies": {
+    "@azure/data-tables": "^13.3.1",
+    "web-push": "^3.6.1"
+  }
+}

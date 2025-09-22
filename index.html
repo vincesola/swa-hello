@@ -1,5 +1,57 @@
 <!doctype html>
-<html><body>
-  <h1>SWA is live ✅</h1>
-  <p><a href="/login">Login with Microsoft</a> | <a href="/.auth/me">View /.auth/me</a></p>
-</body></html>
+<html>
+  <body>
+    <h1>SWA is live ✅</h1>
+    <p>
+      <a href="/login">Login</a> |
+      <a href="/.auth/me" target="_blank">/.auth/me</a>
+    </p>
+
+    <button id="btnSub">Subscribe to Push</button>
+    <button id="btnTest">Send Test Push</button>
+
+    <script>
+      async function getPublicKey() {
+        const r = await fetch('/api/push/config', { credentials: 'include' });
+        const j = await r.json();
+        return j.vapidPublicKey;
+      }
+      function toUint8(base64url) {
+        const pad = '='.repeat((4 - base64url.length % 4) % 4);
+        const b64 = (base64url + pad).replace(/-/g, '+').replace(/_/g, '/');
+        const raw = atob(b64);
+        const out = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+        return out;
+      }
+
+      document.getElementById('btnSub').onclick = async () => {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+          alert('Push not supported in this browser');
+          return;
+        }
+        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') { alert('Permission denied'); return; }
+        const vapid = await getPublicKey();
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: toUint8(vapid)
+        });
+        await fetch('/api/push/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ subscription: sub })
+        });
+        alert('Subscribed! Now click "Send Test Push".');
+      };
+
+      document.getElementById('btnTest').onclick = async () => {
+        const r = await fetch('/api/push/send-test', { method: 'POST', credentials: 'include' });
+        const j = await r.json();
+        alert(JSON.stringify(j));
+      };
+    </script>
+  </body>
+</html>

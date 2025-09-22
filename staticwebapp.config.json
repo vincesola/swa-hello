@@ -1,7 +1,9 @@
 {
   "navigationFallback": { "rewrite": "/index.html" },
   "routes": [
+    { "route": "/api/*", "allowedRoles": ["authenticated"] },
     { "route": "/login",  "redirect": "/.auth/login/aad?post_login_redirect_uri=/" },
     { "route": "/logout", "redirect": "/.auth/logout?post_logout_redirect_uri=/" }
-  ]
+  ],
+  "responseOverrides": { "401": { "redirect": "/login", "statusCode": 302 } }
 }
