@@ -1,4 +1,8 @@
 module.exports = async function (context, req) {
-  context.res = { headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ vapidPublicKey: process.env.VAPID_PUBLIC_KEY || "" }) };
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "";
+  context.res = {
+    status: vapidPublicKey ? 200 : 500,
+    headers: { "Content-Type": "application/json" },
+    body: { vapidPublicKey }
+  };
 };
