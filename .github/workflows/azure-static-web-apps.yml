@@ -17,12 +17,11 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: upload
-          # App (plain static files at repo root)
           app_location: "/"
-          output_location: ""          # no build step for the app
+          output_location: ""      # empty (no app build)
           skip_app_build: true
-          # API (managed Functions)
           api_location: "api"
-          api_language: "node"         # 👈 tell SWA the runtime
-          api_version: "18"            # 👈 Node 18 for managed API
-          # (do NOT set skip_api_build: true — we want npm install to run)
+          api_language: "node"
+          api_version: "18"
+          # DO NOT set skip_api_build: true
+
