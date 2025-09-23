@@ -2,8 +2,8 @@
   "bindings": [
     {
       "type": "httpTrigger",
-      "authLevel": "anonymous",
       "direction": "in",
+      "authLevel": "anonymous",
       "methods": ["post"],
       "name": "req",
       "route": "push/register"
