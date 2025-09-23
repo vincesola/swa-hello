@@ -4,12 +4,10 @@
     "exclude": [ "/api/*", "/.auth/*" ]
   },
   "routes": [
+    { "route": "/api/diag", "allowedRoles": [ "anonymous", "authenticated" ] },
     { "route": "/api/push/config", "allowedRoles": [ "anonymous", "authenticated" ] },
-
     { "route": "/api/push/ping", "allowedRoles": [ "anonymous", "authenticated" ] },
-
     { "route": "/api/*", "allowedRoles": [ "authenticated" ] },
-
     { "route": "/login",  "redirect": "/.auth/login/aad?post_login_redirect_uri=/" },
     { "route": "/logout", "redirect": "/.auth/logout?post_logout_redirect_uri=/" }
   ],

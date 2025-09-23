@@ -26,6 +26,8 @@
 			<button id="btnSW">Register SW</button>
 			<button id="btnSub">Subscribe to Push</button>
 			<button id="btnTest">Send Test Push</button>
+			<button id="btnDiag">Run Diagnostics</button>
+
 		</div>
 
 		<h3>Log</h3>
@@ -128,6 +130,14 @@
 					log('send-test response:', await r.text());
 				} catch (e) { log('ERROR send-test:', e.message); }
 			};
+
+			 document.getElementById('btnDiag').onclick = async () => {
+					try {
+					const r = await fetch('/api/diag', { credentials: 'include' });
+					log('/api/diag status:', r.status);
+					log('diag response:', await r.text());
+					} catch (e) { log('ERROR diag:', e.message); }
+				};
 
 			// Optional: auto-log support status
 			log('supports SW:', 'serviceWorker' in navigator, 'supports Push:', 'PushManager' in window);
