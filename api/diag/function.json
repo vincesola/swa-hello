@@ -1,0 +1,14 @@
+{
+  "bindings": [
+    {
+      "type": "httpTrigger",
+      "direction": "in",
+      "authLevel": "anonymous",
+      "methods": ["get"],
+      "name": "req",
+      "route": "diag"
+    },
+    { "type": "http", "direction": "out", "name": "res" }
+  ],
+  "scriptFile": "index.js"
+}

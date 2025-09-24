@@ -8,40 +8,56 @@ function principal(headers) {
 }
 
 module.exports = async function (context, req) {
-  const p = principal(req.headers);
-  if (!p) { context.res = { status: 401, body: { error: "not signed in" } }; return; }
+  try {
+    const p = principal(req.headers);
+    if (!p) return (context.res = { status: 401, body: { error: "not signed in" } });
 
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:admin@example.com",
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
+    if (!process.env.TABLES_CONNECTION_STRING) {
+      context.log.error("Missing TABLES_CONNECTION_STRING");
+      return (context.res = { status: 500, body: { error: "Missing TABLES_CONNECTION_STRING" } });
+    }
+    if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+      context.log.error("Missing VAPID keys");
+      return (context.res = { status: 500, body: { error: "Missing VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY" } });
+    }
 
-  const client = TableClient.fromConnectionString(process.env.TABLES_CONNECTION_STRING, "PushSubs");
-  const subs = [];
-  for await (const e of client.listEntities({
-    queryOptions: { filter: `PartitionKey eq '${p.userId}' and enabled eq true` }
-  })) subs.push(e);
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT || "mailto:admin@example.com",
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
 
-  if (!subs.length) { context.res = { status: 404, body: { error: "no subscriptions" } }; return; }
+    const client = TableClient.fromConnectionString(process.env.TABLES_CONNECTION_STRING, "PushSubs");
+    const subs = [];
+    for await (const e of client.listEntities({
+      queryOptions: { filter: `PartitionKey eq '${p.userId}' and enabled eq true` }
+    })) subs.push(e);
 
-  const payload = JSON.stringify({ title: "ADHD Cleaning App", body: "Test push ✅", url: "/" });
+    if (!subs.length) return (context.res = { status: 404, body: { error: "no subscriptions" } });
 
-  let sent = 0, removed = 0;
-  for (const s of subs) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        payload
-      );
-      sent++;
-    } catch (err) {
-      if (err?.statusCode === 404 || err?.statusCode === 410) {
-        await client.deleteEntity(s.partitionKey, s.rowKey);
-        removed++;
+    const payload = JSON.stringify({ title: "ADHD Cleaning App", body: "Test push ✅", url: "/" });
+
+    let sent = 0, removed = 0, errors = 0;
+    for (const s of subs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          payload
+        );
+        sent++;
+      } catch (err) {
+        errors++;
+        context.log.warn("SEND ERROR:", err?.statusCode, err?.message);
+        if (err?.statusCode === 404 || err?.statusCode === 410) {
+          await client.deleteEntity(s.partitionKey, s.rowKey);
+          removed++;
+        }
       }
     }
-  }
 
-  context.res = { body: { ok: true, sent, removed } };
+    context.res = { body: { ok: true, sent, removed, errors } };
+  } catch (e) {
+    context.log.error("SEND-TEST ERROR:", e);
+    context.res = { status: 500, body: { error: e?.message || String(e) } };
+  }
 };

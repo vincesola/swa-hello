@@ -4,7 +4,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "authLevel": "anonymous",
-      "methods": [ "get" ],
+      "methods": ["get"],
       "name": "req",
       "route": "push/ping"
     },
